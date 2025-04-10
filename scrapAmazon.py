@@ -78,6 +78,16 @@ def coletar_avaliacao(driver):
         return elemento_avaliacao.text.strip()
     except Exception:
         return "Sem avaliação"
+    
+def coletar_quantidade_avaliacoes(driver):
+    try:
+        elemento = driver.find_element(By.ID, 'acrCustomerReviewText')
+        texto = elemento.text  # Exemplo: "31 avaliações de clientes"
+        numero = int(''.join(filter(str.isdigit, texto)))
+        return numero
+    except Exception as e:
+        print(f"Erro ao coletar avaliações: {e}")
+        return 0
 
 def ir_para_proxima_pagina(driver):
     try:
@@ -112,7 +122,7 @@ def coletar_dados_produtos(driver):
     produtos_info = []
 
     while True:
-        time.sleep(random.uniform(2, 5))
+        time.sleep(random.uniform(2, 6))
         rolar_pagina_suavemente(driver)
         simular_mouse(driver)
         time.sleep(random.uniform(1, 3))
@@ -135,6 +145,7 @@ def coletar_dados_produtos(driver):
             # Coleta dados da página individual
             descricao = coletar_descricao(driver)
             avaliacao = coletar_avaliacao(driver)
+            qtd_avaliacao = coletar_quantidade_avaliacoes(driver)
 
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
@@ -145,7 +156,8 @@ def coletar_dados_produtos(driver):
                     "titulo": titulo,
                     "preco": preco,
                     "descricao": descricao,
-                    "avaliacao": avaliacao
+                    "avaliacao": avaliacao,
+                    "qtd_avaliacao": qtd_avaliacao
                 })
 
         if not ir_para_proxima_pagina(driver):
@@ -155,7 +167,7 @@ def coletar_dados_produtos(driver):
 
 def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo="produtos_amazonteste.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
-        campos = ["titulo", "preco", "descricao", "avaliacao"]
+        campos = ["titulo", "preco", "descricao", "avaliacao", "qtd_avaliacao"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
         escritor.writeheader()
         for produto in lista_de_produtos:
