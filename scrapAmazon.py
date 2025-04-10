@@ -4,6 +4,7 @@ import random
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.common.action_chains import ActionChains
 
 def iniciar_driver():
     user_agents = [
@@ -15,7 +16,7 @@ def iniciar_driver():
     ]
 
     user_agent = random.choice(user_agents)
-    print(f"🧠 Usando user-agent: {user_agent}")
+    print(f"Usando user-agent: {user_agent}")
 
     options = webdriver.ChromeOptions()
     options.add_argument(f'user-agent={user_agent}')
@@ -32,6 +33,37 @@ def coletar_titulo(produto):
     except:
         return "Título não encontrado"
 
+def rolar_pagina_suavemente(driver):
+    altura_total = driver.execute_script("return document.body.scrollHeight")
+    posicao = 0
+    while posicao < altura_total:
+        passo = random.randint(100, 300)
+        posicao += passo
+        driver.execute_script(f'window.scrollTo(0, {posicao});')
+        time.sleep(random.uniform(0.2, 0.5))
+
+def simular_mouse(driver):
+    try:
+        # Seleciona alguns elementos clicáveis ou que chamem atenção
+        elementos = driver.find_elements(By.CSS_SELECTOR, 'a.a-link-normal')
+
+        # Limita a quantidade para não exagerar
+        elementos_visiveis = random.sample(elementos, min(3, len(elementos)))
+
+        actions = ActionChains(driver)
+
+        for el in elementos_visiveis:
+            # Move o mouse até o elemento
+            actions.move_to_element(el).pause(random.uniform(0.5, 1.5))
+
+        actions.perform()
+
+        # Adiciona pequenas pausas entre ações para parecer mais humano
+        time.sleep(random.uniform(0.5, 1.2))
+
+    except Exception as e:
+        print(f"Erro na simulação de mouse: {e}")
+
 def coletar_preco(produto):
     try:
         inteiro = produto.find_element(By.CSS_SELECTOR, 'span.a-price-whole').text
@@ -40,11 +72,12 @@ def coletar_preco(produto):
     except:
         return "Preço não encontrado"
 
-def coletar_avaliacao(produto):
+def coletar_avaliacao(driver):
     try:
-        return produto.find_element(By.CSS_SELECTOR, 'span.a-icon-alt').text
-    except:
-        return "Avaliação não encontrada"
+        elemento_avaliacao = driver.find_element(By.CSS_SELECTOR, '[data-hook="rating-out-of-text"]')
+        return elemento_avaliacao.text.strip()
+    except Exception:
+        return "Sem avaliação"
 
 def ir_para_proxima_pagina(driver):
     try:
@@ -65,13 +98,23 @@ def ir_para_proxima_pagina(driver):
     except:    
         return False
     
+def coletar_descricao(drive):
+    try:
+        paragrafos = driver.find_elements(By.CSS_SELECTOR, "#productDescription p")
+        descricao = "\n".join(p.text.strip() for p in paragrafos if p.text.strip())
+        return descricao if descricao else "Descrição vazia"
+    except Exception as e:
+        print(f"Erro ao coletar descrição: {e}")
+        return "Descrição não encontrada"
+    
 
 def coletar_dados_produtos(driver):
     produtos_info = []
 
     while True:
         time.sleep(random.uniform(2, 5))
-        driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
+        rolar_pagina_suavemente(driver)
+        simular_mouse(driver)
         time.sleep(random.uniform(1, 3))
 
         produtos = coletar_elementos_produto(driver)
@@ -79,12 +122,29 @@ def coletar_dados_produtos(driver):
         for produto in produtos:
             titulo = coletar_titulo(produto)
             preco = coletar_preco(produto)
-            avaliacao = coletar_avaliacao(produto)
+
+            # Coleta o link do produto
+            link = produto.find_element(By.CSS_SELECTOR, 'a.a-link-normal.s-no-outline').get_attribute("href")
+
+            # Abre nova aba com o link
+            driver.execute_script(f"window.open('{link}');")
+            driver.switch_to.window(driver.window_handles[1])
+            rolar_pagina_suavemente(driver)
+            time.sleep(random.uniform(2, 4))
+
+            # Coleta dados da página individual
+            descricao = coletar_descricao(driver)
+            avaliacao = coletar_avaliacao(driver)
+
+            driver.close()
+            driver.switch_to.window(driver.window_handles[0])
+            time.sleep(random.uniform(1.5, 3.5))
 
             if titulo != "Título não encontrado" and preco != "Preço não encontrado":
                 produtos_info.append({
                     "titulo": titulo,
                     "preco": preco,
+                    "descricao": descricao,
                     "avaliacao": avaliacao
                 })
 
@@ -95,7 +155,7 @@ def coletar_dados_produtos(driver):
 
 def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo="produtos_amazonteste.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
-        campos = ["titulo", "preco", "avaliacao"]
+        campos = ["titulo", "preco", "descricao", "avaliacao"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
         escritor.writeheader()
         for produto in lista_de_produtos:
@@ -112,4 +172,4 @@ if __name__ == "__main__":
     salvar_produtos_em_csv(produtos)
 
     driver.quit()
-    print("✅ Produtos salvos com sucesso.")
+    print("Produtos salvos com sucesso.")
