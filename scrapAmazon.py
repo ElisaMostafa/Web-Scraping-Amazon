@@ -5,14 +5,22 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from PIL import Image
+from io import BytesIO
+import requests
 
 def iniciar_driver():
     user_agents = [
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.3 Safari/605.1.15",
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Firefox/123.0",
-        "Mozilla/5.0 (Linux; Android 10; SM-G970F) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Mobile Safari/537.36"
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.6261.129 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.6312.105 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.6367.91 Safari/537.36",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.6415.45 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 11.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.6460.70 Safari/537.36",
+        "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:124.0) Gecko/20100101 Chrome/124.0.6367.78 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:135.0) Gecko/20100101 Chrome/135.0.7049.85 Safari/537.36",
+        "Mozilla/5.0 (Windows NT 10.0; rv:134.0) Gecko/20100101 Chrome/134.0.6997.54 Safari/537.36"
     ]
 
     user_agent = random.choice(user_agents)
@@ -78,7 +86,7 @@ def coletar_avaliacao(driver):
         return elemento_avaliacao.text.strip()
     except Exception:
         return "Sem avaliação"
-    
+
 def coletar_quantidade_avaliacoes(driver):
     try:
         elemento = driver.find_element(By.ID, 'acrCustomerReviewText')
@@ -88,6 +96,15 @@ def coletar_quantidade_avaliacoes(driver):
     except Exception as e:
         print(f"Erro ao coletar avaliações: {e}")
         return 0
+
+def coletar_bullet_points(driver):
+    try:
+        elementos = driver.find_elements(By.CSS_SELECTOR, '#feature-bullets span.a-list-item')
+        bullets = [el.text.strip() for el in elementos if el.text.strip()]
+        return bullets if bullets else ["Bullet points não encontrados"]
+    except Exception as e:
+        print(f"Erro ao coletar bullet points: {e}")
+        return ["Erro ao coletar bullet points"]
 
 def ir_para_proxima_pagina(driver):
     try:
@@ -108,7 +125,7 @@ def ir_para_proxima_pagina(driver):
     except:    
         return False
     
-def coletar_descricao(drive):
+def coletar_descricao(driver):
     try:
         paragrafos = driver.find_elements(By.CSS_SELECTOR, "#productDescription p")
         descricao = "\n".join(p.text.strip() for p in paragrafos if p.text.strip())
@@ -116,7 +133,49 @@ def coletar_descricao(drive):
     except Exception as e:
         print(f"Erro ao coletar descrição: {e}")
         return "Descrição não encontrada"
-    
+
+def coletar_imagem(driver):
+    try:  
+        imagem_elemento = driver.find_element(By.CSS_SELECTOR, "div.imgTagWrapper img")
+        imagem_alta = imagem_elemento.get_attribute("data-old-hires")
+        if imagem_alta:
+            return imagem_alta
+        else:
+            return imagem_elemento.get_attribute("src")  # fallback se o data-old-hires estiver vazio
+    except Exception as e:
+        print(f"[ERRO] coletar_imagem: {type(e).__name__} - {str(e)}")
+        return None
+
+
+
+def coletar_qtd_imagem(driver):
+    try:
+        miniaturas = driver.find_elements(By.CSS_SELECTOR, "li.imageThumbnail img")
+        miniaturas_visiveis = [m for m in miniaturas if m.is_displayed()]
+        return len(miniaturas_visiveis)
+    except Exception as e:
+        print(f"Erro ao coletar miniaturas: {e}")
+        return 0
+
+def coletar_qualidade_imagem(driver):
+    try:
+        img_principal = driver.find_element(By.CSS_SELECTOR, "img.a-dynamic-image")
+        img_url = img_principal.get_attribute("data-old-hires")
+
+        if not img_url:
+            print("[ERRO] Atributo data-old-hires não encontrado.")
+            return None
+
+        # Faz o download da imagem
+        response = requests.get(img_url)
+        image = Image.open(BytesIO(response.content))
+
+        largura, altura = image.size
+        return f"{largura}x{altura}"
+
+    except Exception as e:
+        print(f"[ERRO] qualidade_imagem: {e}")
+        return None
 
 def coletar_dados_produtos(driver):
     produtos_info = []
@@ -146,6 +205,10 @@ def coletar_dados_produtos(driver):
             descricao = coletar_descricao(driver)
             avaliacao = coletar_avaliacao(driver)
             qtd_avaliacao = coletar_quantidade_avaliacoes(driver)
+            bullets = coletar_bullet_points(driver)
+            imagem = coletar_imagem(driver)
+            qtd_imagem = coletar_qtd_imagem(driver)
+            qualidade_imagem = coletar_qualidade_imagem(driver)
 
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
@@ -157,7 +220,11 @@ def coletar_dados_produtos(driver):
                     "preco": preco,
                     "descricao": descricao,
                     "avaliacao": avaliacao,
-                    "qtd_avaliacao": qtd_avaliacao
+                    "qtd_avaliacao": qtd_avaliacao,
+                    "bullets": bullets,
+                    "imagem": imagem,
+                    "qtd_imagem": qtd_imagem,
+                    "qualidade_imagem": qualidade_imagem
                 })
 
         if not ir_para_proxima_pagina(driver):
@@ -167,13 +234,14 @@ def coletar_dados_produtos(driver):
 
 def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo="produtos_amazonteste.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
-        campos = ["titulo", "preco", "descricao", "avaliacao", "qtd_avaliacao"]
+        campos = ["titulo", "preco", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
         escritor.writeheader()
         for produto in lista_de_produtos:
             escritor.writerow(produto)
 
-# ----------- EXEMPLO DE USO -----------
+
+# ------------------------------------------ EXECUÇÃO PRINCIPAL --------------------------------------------------
 if __name__ == "__main__":
     driver = iniciar_driver()
     driver.get("https://www.amazon.com.br/s?i=merchant-items&me=A2ZYQFB9FA7MU3&marketplaceID=A2Q3Y263D00KWC&qid=1744132770&xpid=tqkuqdh5H_SQg&ref=sr_pg_1")
@@ -183,5 +251,5 @@ if __name__ == "__main__":
     produtos = coletar_dados_produtos(driver)
     salvar_produtos_em_csv(produtos)
 
-    driver.quit()
+    driver.quit() 
     print("Produtos salvos com sucesso.")
