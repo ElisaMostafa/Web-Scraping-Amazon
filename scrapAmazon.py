@@ -146,8 +146,6 @@ def coletar_imagem(driver):
         print(f"[ERRO] coletar_imagem: {type(e).__name__} - {str(e)}")
         return None
 
-
-
 def coletar_qtd_imagem(driver):
     try:
         miniaturas = driver.find_elements(By.CSS_SELECTOR, "li.imageThumbnail img")
@@ -157,6 +155,17 @@ def coletar_qtd_imagem(driver):
         print(f"Erro ao coletar miniaturas: {e}")
         return 0
 
+def verificar_video(driver):
+    try:
+        video_elementos = driver.find_elements(By.CSS_SELECTOR, "li.videoThumbnail video")
+        for v in video_elementos:
+            if v.is_displayed():
+                return True
+        return False
+    except Exception as e:
+        print(f"Erro ao verificar vídeo: {e}")
+        return False
+    
 def coletar_qualidade_imagem(driver):
     try:
         img_principal = driver.find_element(By.CSS_SELECTOR, "img.a-dynamic-image")
@@ -176,6 +185,24 @@ def coletar_qualidade_imagem(driver):
     except Exception as e:
         print(f"[ERRO] qualidade_imagem: {e}")
         return None
+
+def coletar_categoria(driver):
+    try:
+        # Encontrar o último item da lista de categorias (geralmente o mais específico)
+        categoria_elementos = driver.find_elements(By.CSS_SELECTOR, "li span.a-list-item a.a-link-normal.a-color-tertiary")
+        
+        if categoria_elementos:
+            categoria = categoria_elementos[-1]  # A mais específica costuma ser a última
+            nome_categoria = categoria.text.strip()
+            link_categoria = categoria.get_attribute("href")
+            return nome_categoria, link_categoria
+        else:
+            return "Categoria não encontrada", "Link não encontrado"
+        
+    except Exception as e:
+        print(f"Erro ao coletar categoria: {e}")
+        return "Categoria não encontrada", "Link não encontrado"
+
 
 def coletar_dados_produtos(driver):
     produtos_info = []
@@ -209,6 +236,8 @@ def coletar_dados_produtos(driver):
             imagem = coletar_imagem(driver)
             qtd_imagem = coletar_qtd_imagem(driver)
             qualidade_imagem = coletar_qualidade_imagem(driver)
+            video = verificar_video(driver)
+            nome_categoria, link_categoria = coletar_categoria(driver)
 
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
@@ -224,7 +253,10 @@ def coletar_dados_produtos(driver):
                     "bullets": bullets,
                     "imagem": imagem,
                     "qtd_imagem": qtd_imagem,
-                    "qualidade_imagem": qualidade_imagem
+                    "qualidade_imagem": qualidade_imagem,
+                    "video": video,
+                    "nome_categoria": nome_categoria,
+                    "link_categoria": link_categoria
                 })
 
         if not ir_para_proxima_pagina(driver):
@@ -234,7 +266,7 @@ def coletar_dados_produtos(driver):
 
 def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo="produtos_amazonteste.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
-        campos = ["titulo", "preco", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem"]
+        campos = ["titulo", "preco", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "link_categoria"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
         escritor.writeheader()
         for produto in lista_de_produtos:
