@@ -1,4 +1,4 @@
-from scrapAmazon import iniciar_driver, coletar_bullet_points, rolar_pagina_suavemente, simular_mouse, coletar_imagem, coletar_qualidade_imagem, coletar_qtd_imagem
+from scrapAmazon import iniciar_driver, coletar_bullet_points, rolar_pagina_suavemente, simular_mouse, coletar_imagem, coletar_qualidade_imagem, coletar_qtd_imagem, coletar_fba
 import time
 import csv
 import random
@@ -23,12 +23,9 @@ def teste():
         simular_mouse(driver)
         time.sleep(random.uniform(1.5, 3.5))
 
-        imagens = coletar_imagem(driver) 
-        quantidade = coletar_qtd_imagem(driver)
-        qualidade_imagem = coletar_qualidade_imagem(driver)# >>>>> FUNÇÃO A SER TESTADA
+        coletar_fba(driver)# >>>>> FUNÇÃO A SER TESTADA
         
-        print(qualidade_imagem)
-
+        
         # for imagem in imagens:
         #     print(f"- {imagem}")
 
