@@ -99,9 +99,17 @@ def coletar_quantidade_avaliacoes(driver):
 
 def coletar_bullet_points(driver):
     try:
-        elementos = driver.find_elements(By.CSS_SELECTOR, '#feature-bullets span.a-list-item')
+        # Primeira tentativa: bullets no bloco com spacing-small
+        elementos = driver.find_elements(By.CSS_SELECTOR, 'ul.a-unordered-list.a-vertical.a-spacing-small li span.a-list-item')
         bullets = [el.text.strip() for el in elementos if el.text.strip()]
+
+        # Se não encontrou nada, tenta no bloco com spacing-mini
+        if not bullets:
+            elementos = driver.find_elements(By.CSS_SELECTOR, 'ul.a-unordered-list.a-vertical.a-spacing-mini li span.a-list-item')
+            bullets = [el.text.strip() for el in elementos if el.text.strip()]
+
         return bullets if bullets else ["Bullet points não encontrados"]
+
     except Exception as e:
         print(f"Erro ao coletar bullet points: {e}")
         return ["Erro ao coletar bullet points"]
@@ -203,6 +211,13 @@ def coletar_categoria(driver):
         print(f"Erro ao coletar categoria: {e}")
         return "Categoria não encontrada", "Link não encontrado"
 
+def coletar_fba(driver):
+    try: 
+        fba_elemento = driver.find_element(By.CSS_SELECTOR, "div span.a-size-small.offer-display-feature-text-message")
+        return fba_elemento.text.strip()
+    except Exception as e:
+        print(f"Erro ao coletar FBA: {e}")
+        return "FBA não encontrado"
 
 def coletar_dados_produtos(driver):
     produtos_info = []
@@ -238,6 +253,8 @@ def coletar_dados_produtos(driver):
             qualidade_imagem = coletar_qualidade_imagem(driver)
             video = verificar_video(driver)
             nome_categoria, link_categoria = coletar_categoria(driver)
+            fba = coletar_fba(driver)
+            
 
             driver.close()
             driver.switch_to.window(driver.window_handles[0])
@@ -247,6 +264,7 @@ def coletar_dados_produtos(driver):
                 produtos_info.append({
                     "titulo": titulo,
                     "preco": preco,
+                    "link": link,
                     "descricao": descricao,
                     "avaliacao": avaliacao,
                     "qtd_avaliacao": qtd_avaliacao,
@@ -256,7 +274,8 @@ def coletar_dados_produtos(driver):
                     "qualidade_imagem": qualidade_imagem,
                     "video": video,
                     "nome_categoria": nome_categoria,
-                    "link_categoria": link_categoria
+                    "link_categoria": link_categoria,
+                    "fba": fba
                 })
 
         if not ir_para_proxima_pagina(driver):
@@ -266,7 +285,7 @@ def coletar_dados_produtos(driver):
 
 def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo="produtos_amazonteste.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
-        campos = ["titulo", "preco", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "link_categoria"]
+        campos = ["titulo", "preco", "link", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "link_categoria", "fba"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
         escritor.writeheader()
         for produto in lista_de_produtos:
@@ -285,3 +304,5 @@ if __name__ == "__main__":
 
     driver.quit() 
     print("Produtos salvos com sucesso.")
+
+
