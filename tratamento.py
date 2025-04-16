@@ -31,6 +31,14 @@ def verificar_video(video):
         return "Adicionar um video"
     return "OK"
 
+def verificar_fba(resultado):
+    try:
+        if resultado != "Amazon":
+            return "Não"
+        return "Sim"
+    except Exception as e:
+        return f"ERRO - {str(e)}"
+
 
 df_result = pd.DataFrame({
     'Título': df['titulo'].apply(verficar_char_titulo),
