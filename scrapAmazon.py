@@ -10,6 +10,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from PIL import Image
 from io import BytesIO
 import requests
+import os
 
 def iniciar_driver():
     user_agents = [
@@ -219,6 +220,16 @@ def coletar_fba(driver):
         print(f"Erro ao coletar FBA: {e}")
         return "FBA não encontrado"
 
+def coletar_nome_vendedor(driver):
+    try:
+        nome_elemento = driver.find_element(By.ID, "sellerProfileTriggerId")
+        nome_bruto = nome_elemento.text.strip()
+        nome_formatado = nome_bruto.replace(" ", "").replace(".", "").replace(",", "").replace("-", "").replace("/", "")
+        return nome_formatado
+    except Exception as e:
+        print(f"Erro ao coletar nome do vendedor: {e}")
+        return "Nome não encontrado"
+
 def coletar_dados_produtos(driver):
     produtos_info = []
 
@@ -254,6 +265,7 @@ def coletar_dados_produtos(driver):
             video = verificar_video(driver)
             nome_categoria, link_categoria = coletar_categoria(driver)
             fba = coletar_fba(driver)
+            conta = coletar_nome_vendedor(driver)
             
 
             driver.close()
@@ -275,7 +287,8 @@ def coletar_dados_produtos(driver):
                     "video": video,
                     "nome_categoria": nome_categoria,
                     "link_categoria": link_categoria,
-                    "fba": fba
+                    "fba": fba,
+                    "conta": conta
                 })
 
         if not ir_para_proxima_pagina(driver):
@@ -283,7 +296,21 @@ def coletar_dados_produtos(driver):
 
     return produtos_info
 
-def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo="produtos_amazonteste.csv"):
+def salvar_produtos_em_csv(lista_de_produtos, conta=None):
+    
+    # Se não foi passada conta, usa um nome genérico
+    if not conta:
+        conta = "vendedor_desconhecido"
+
+    # Nome base do arquivo
+    base_nome = f"produtos_amazon{conta}"
+    nome_arquivo = f"{base_nome}.csv"
+    contador = 1
+
+    # Evita sobrescrever arquivos: incrementa um número no nome se o arquivo já existir
+    while os.path.exists(nome_arquivo):
+        nome_arquivo = f"{base_nome}_{contador}.csv"
+        contador += 1
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
         campos = ["titulo", "preco", "link", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "link_categoria", "fba"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
