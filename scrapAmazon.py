@@ -1,12 +1,16 @@
 import time
 import csv
 import random
+import re
+from datetime import datetime
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.support import expected_conditions as EC
+
 from PIL import Image
 from io import BytesIO
 import requests
@@ -80,6 +84,9 @@ def coletar_preco(produto):
         return f"R${inteiro},{centavos}"
     except:
         return "Preço não encontrado"
+    
+def coletar_data_extracao():
+    return datetime.now().strftime("%d/%m/%Y")
 
 def coletar_avaliacao(driver):
     try:
@@ -220,6 +227,29 @@ def coletar_fba(driver):
         print(f"Erro ao coletar FBA: {e}")
         return "FBA não encontrado"
 
+def coletar_ranking(driver): 
+    try:
+        elemento_td = driver.find_element(
+            By.XPATH,
+            '//th[contains(text(), "Ranking dos mais vendidos")]/following-sibling::td'
+        )
+        texto_ranking = elemento_td.text.strip()
+
+        # Pegar todos os rankings com ponto ou sem ponto (ex: 66.558 ou 863)
+        matches = re.findall(r'N[ºo]?\s*([\d\.]+)', texto_ranking)
+
+        if matches:
+            # Pegar o ÚLTIMO ranking da lista (o mais específico, ex: Hubs USB)
+            ranking_texto = matches[-1].replace('.', '')  # remover o ponto dos milhares
+            return int(ranking_texto)
+        else:
+            print("Ranking não encontrado no texto:", texto_ranking)
+            return None
+
+    except NoSuchElementException:
+        print("Elemento de ranking não encontrado.")
+        return "Indisponível"
+    
 def coletar_nome_vendedor(driver):
     try:
         nome_elemento = driver.find_element(By.ID, "sellerProfileTriggerId")
@@ -264,8 +294,10 @@ def coletar_dados_produtos(driver):
             qualidade_imagem = coletar_qualidade_imagem(driver)
             video = verificar_video(driver)
             nome_categoria, link_categoria = coletar_categoria(driver)
+            ranking = coletar_ranking(driver)
             fba = coletar_fba(driver)
-            conta = coletar_nome_vendedor(driver)
+            
+            
             
 
             driver.close()
@@ -286,9 +318,11 @@ def coletar_dados_produtos(driver):
                     "qualidade_imagem": qualidade_imagem,
                     "video": video,
                     "nome_categoria": nome_categoria,
+                    "ranking": ranking,
                     "link_categoria": link_categoria,
                     "fba": fba,
-                    "conta": conta
+                    "data_coleta": datetime.now().strftime("%d/%m/%Y")
+                    
                 })
 
         if not ir_para_proxima_pagina(driver):
@@ -296,23 +330,9 @@ def coletar_dados_produtos(driver):
 
     return produtos_info
 
-def salvar_produtos_em_csv(lista_de_produtos, conta=None):
-    
-    # Se não foi passada conta, usa um nome genérico
-    if not conta:
-        conta = "vendedor_desconhecido"
-
-    # Nome base do arquivo
-    base_nome = f"produtos_amazon{conta}"
-    nome_arquivo = f"{base_nome}.csv"
-    contador = 1
-
-    # Evita sobrescrever arquivos: incrementa um número no nome se o arquivo já existir
-    while os.path.exists(nome_arquivo):
-        nome_arquivo = f"{base_nome}_{contador}.csv"
-        contador += 1
+def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo=f"produtos_amazonteste.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
-        campos = ["titulo", "preco", "link", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "link_categoria", "fba"]
+        campos = ["titulo", "preco", "link", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "ranking", "link_categoria", "fba", "data_coleta"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
         escritor.writeheader()
         for produto in lista_de_produtos:
