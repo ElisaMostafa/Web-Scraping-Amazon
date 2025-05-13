@@ -259,6 +259,7 @@ def coletar_nome_vendedor(driver):
     except Exception as e:
         print(f"Erro ao coletar nome do vendedor: {e}")
         return "Nome não encontrado"
+    
 
 def coletar_dados_produtos(driver):
     produtos_info = []
@@ -330,7 +331,7 @@ def coletar_dados_produtos(driver):
 
     return produtos_info
 
-def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo=f"produtos_amazonteste.csv"):
+def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo=f"produtos_amazon.csv"):
     with open(nome_arquivo, mode='w', newline='', encoding='utf-8') as arquivo:
         campos = ["titulo", "preco", "link", "descricao", "avaliacao", "qtd_avaliacao", "bullets", "imagem", "qtd_imagem", "qualidade_imagem", "video", "nome_categoria", "ranking", "link_categoria", "fba", "data_coleta"]
         escritor = csv.DictWriter(arquivo, fieldnames=campos)
@@ -342,6 +343,7 @@ def salvar_produtos_em_csv(lista_de_produtos, nome_arquivo=f"produtos_amazontest
 # ------------------------------------------ EXECUÇÃO PRINCIPAL --------------------------------------------------
 if __name__ == "__main__":
     driver = iniciar_driver()
+    # WayTechBR - https://www.amazon.com.br/s?i=merchant-items&me=A2ZYQFB9FA7MU3&marketplaceID=A2Q3Y263D00KWC&qid=1744132770&xpid=tqkuqdh5H_SQg&ref=sr_pg_1
     driver.get("https://www.amazon.com.br/s?i=merchant-items&me=A2ZYQFB9FA7MU3&marketplaceID=A2Q3Y263D00KWC&qid=1744132770&xpid=tqkuqdh5H_SQg&ref=sr_pg_1")
 
     time.sleep(3)  # Espera inicial
@@ -351,5 +353,3 @@ if __name__ == "__main__":
 
     driver.quit() 
     print("Produtos salvos com sucesso.")
-
-
