@@ -7,7 +7,7 @@ df = pd.read_csv('produtos_amazonteste.csv')
 
 def verficar_char_titulo(titulo):
     if len(titulo) > 200:
-        return len(titulo), "ERRADO - Acima de 200"
+        return len(titulo), "Necessário alteração. Muito longo"
     return len(titulo), "OK"
 
 def verificar_qualidade_imagem(resolucao):
@@ -17,8 +17,8 @@ def verificar_qualidade_imagem(resolucao):
         if largura > 1100 and altura > 1100:
             return resolucao, "OK"
         elif (largura >= 1000 or altura >=1000) and (altura <=1100 or largura <= 1100):
-            return resolucao, "Media" 
-        return resolucao, "Ruim"
+            return resolucao, "OK" 
+        return resolucao, "Necessário alteração. Baixa resolução"
     except Exception as e:
         return resolucao, f"ERRO - {str(e)}"
     
@@ -39,7 +39,7 @@ def verificar_video(video):
 def verificar_fba(resultado):
     try:
         if resultado != "Amazon":
-            return "Não"
+            return "Entrar para o FBA"
         return "Sim"
     except Exception as e:
         return f"ERRO - {str(e)}"
@@ -55,7 +55,7 @@ def verificar_ranking(ranking):
     try:
         if ranking != "Indisponível":
             return ranking
-        return "-"
+        return "null"
         
     except Exception as e:
         return f"ERRO - {str(e)}"
@@ -82,20 +82,20 @@ def verificar_avaliacao(avaliacao):
     try:
         # Verifica se a avaliação é 'Sem avaliação'
         if avaliacao == 'Sem avaliação':
-            return '-'
+            return 'null'
         
         # Caso contrário, tenta extrair o valor da avaliação
         nota = float(avaliacao.split(' de ')[0].replace(',', '.'))  # Converte a nota para float
         
         # Classificação da avaliação
         if nota >= 4.5:
-            return f"{nota}, Ótima"
-        elif 4.2 <= nota < 4.5:
-            return f"{nota}, Boa"
-        elif 3.9 <= nota < 4.2:
-            return f"{nota}, Média"
+            return f"OK - {nota}, Ótima"
+        elif nota < 4.5 and nota >= 4.2:
+            return f"OK - {nota}, Boa"
+        elif nota >= 3.9 and nota < 4.2:
+            return f"Incentivar + review positivo - {nota}"
         else:
-            return f"{nota}, Ruim"
+            return f"Incentivar + review positivo - {nota}"
     
     except Exception as e:
         return f"ERRO - {str(e)}"
@@ -167,8 +167,8 @@ df_result = pd.DataFrame({
     'Data': df['data_coleta']
 })
 
-df_result.to_csv('produtos_verificados.csv', index=False)  # Salva em CSV
-df_result.to_excel('produtos_verificados.xlsx', index=False)  # Salva em XLSX
+df_result.to_csv('erros.csv', index=False)  # Salva em CSV
+df_result.to_excel('erros.xlsx', index=False)  # Salva em XLSX
 
 print("Arquivos salvos com sucesso!")
 
