@@ -27,6 +27,8 @@ def teste():
         resultado = coletar_ranking(driver)
         print(f'Ranking: {resultado}')# >>>>> FUNÇÃO A SER TESTADA
         
+
+        
         
         # for imagem in imagens:
         #     print(f"- {imagem}")
